@@ -1,0 +1,177 @@
+Find the names of all students who are friends with someone named Gabriel.
+
+Note: Your queries are executed using SQLite, so you must conform to the SQL constructs supported by SQLite. 
+
+SELECT name
+FROM Highschooler
+INNER JOIN
+    (SELECT id2
+     FROM Friend,
+         (SELECT id AS gabid
+          FROM Highschooler
+          WHERE name LIKE 'Gabr%')
+     WHERE id1 = gabid ) ON id2=id
+
+----------------------------------------------------------------------------
+
+For every student who likes someone 2 or more grades younger than themselves, return that student's name and grade, and the name and grade of the student they like. 
+
+SELECT h2.name,
+       h2.grade,
+       lname,
+       lgrade
+FROM Highschooler h2
+INNER JOIN
+    (SELECT id1 AS liker,
+            name AS lname,
+            grade AS lgrade,
+            id2 AS likee
+     FROM Highschooler h1
+     INNER JOIN likes ON H1.id=likes.id2) g ON H2.id=liker
+WHERE h2.grade-lgrade>1
+
+----------------------------------------------------------------------------
+
+For every pair of students who both like each other, return the name and grade of both students. Include each pair only once, with the two names in alphabetical order. 
+
+SELECT aname,
+       agrade,
+       bname,
+       bgrade
+FROM (
+SELECT h2.name AS aname,
+       h2.grade AS agrade,
+       n2 AS bname,
+       g2 AS bgrade
+FROM Highschooler h2
+INNER JOIN (
+SELECT l1.id1 AS liker,
+       l1.id2,
+       name AS n2,
+       grade AS g2
+FROM likes l1,
+     likes l2
+INNER JOIN Highschooler h1 ON h1.id=l1.id2
+WHERE l1.id1= l2.id2
+    AND l2.id1= l1.id2) ON h2.id=liker) WHERE aname<bname
+
+----------------------------------------------------------------------------
+
+Find all students who do not appear in the Likes table (as a student who likes or is liked) and return their names and grades. Sort by grade, then by name within each grade. 
+
+SELECT DISTINCT name,
+                grade
+FROM Highschooler
+EXCEPT
+SELECT name,
+       grade
+FROM Highschooler,
+     likes
+WHERE id=id1
+EXCEPT
+SELECT name,
+       grade
+FROM Highschooler,
+     likes
+WHERE id=id2
+ORDER BY grade,
+         name
+
+----------------------------------------------------------------------------
+
+For every situation where student A likes student B, but we have no information about whom B likes (that is, B does not appear as an ID1 in the Likes table), return A and B's names and grades. 
+
+SELECT name,
+       grade,
+       wolfname,
+       g2
+FROM
+    (SELECT id1,
+            id2,
+            name AS wolfname,
+            grade AS g2
+     FROM
+         (SELECT id1,
+                 id2
+          FROM likes
+          EXCEPT SELECT l2.id1,
+                        l2.id2 AS wolf
+          FROM likes l1,
+               likes l2
+          WHERE l2.id2=l1.id1)
+     INNER JOIN Highschooler h2 ON h2.id=id2)
+INNER JOIN Highschooler h1 ON h1.id=id1
+ORDER BY name
+
+----------------------------------------------------------------------------
+
+Find names and grades of students who only have friends in the same grade. Return the result sorted by grade, then by name within each grade.
+
+SELECT name,
+       h3.grade
+FROM
+    (SELECT stid,
+            count(*) AS frnd,
+            grade,
+            sum(grade2% grade) AS samegr
+     FROM
+         (SELECT id1 AS stid,
+                 id2,
+                 grade AS grade2
+          FROM Friend
+          INNER JOIN Highschooler h2 ON h2.id=id2
+          ORDER BY id1)
+     INNER JOIN Highschooler h1 ON h1.id=stid
+     GROUP BY stid)
+INNER JOIN Highschooler h3 ON h3.id=stid
+WHERE samegr=0
+ORDER BY h3.grade,
+         h3.name
+
+----------------------------------------------------------------------------
+
+Find the difference between the number of students in the school and the number of different first names. 
+
+SELECT students - distnames
+FROM
+
+    (SELECT count(h1.name) AS students
+     FROM Highschooler h1) a,
+
+    (SELECT count(DISTINCT h2.name) AS distnames
+     FROM Highschooler h2) b
+----------------------------------------------------------------------------
+
+Find the name and grade of all students who are liked by more than one other student. 
+
+SELECT stnam,
+       stgr
+FROM
+    (SELECT id2 AS stid,
+            name AS stnam,
+            count(id1) AS numfr,
+            grade AS stgr
+     FROM likes
+     INNER JOIN Highschooler h2 ON h2.id=id2
+     GROUP BY stid) a
+WHERE numfr>1
+    SELECT stnam,
+           stgr
+    FROM
+        (SELECT id2 AS stid,
+                name AS stnam,
+                count(id1) AS numfr,
+                grade AS stgr
+         FROM likes
+         INNER JOIN Highschooler h2 ON h2.id=id2
+         GROUP BY stid) a WHERE numfr>1
+    SELECT stnam,
+           stgr
+    FROM
+        (SELECT id2 AS stid,
+                name AS stnam,
+                count(id1) AS numfr,
+                grade AS stgr
+         FROM likes
+         INNER JOIN Highschooler h2 ON h2.id=id2
+         GROUP BY stid) a WHERE numfr>1
